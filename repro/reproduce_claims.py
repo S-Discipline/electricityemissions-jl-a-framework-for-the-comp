@@ -58,33 +58,48 @@ def _sme_grid(max_T):
     return sorted(set(g))
 
 
+# Each scenario carries a separate LSE and SME configuration because the paper
+# uses different noise/controller settings in the LSE notebooks (Fig 1) vs the
+# SME notebooks (Fig 2/3). Fields:
+#   distr, param_input ([mean,std,support] or [lb,ub]), param_dist, k (pendulum),
+#   mult_u, n_epochs.
 SCENARIOS = {
-    # ---- pendulum ----
+    # ---------------- pendulum ----------------
     "pendulum_uniform": dict(
         system="pendulum", distr="uniform",
-        param_input=[-1.0, 1.0], param_dist=[-1.0, 1.0],
-        # paper: LSE uses mean/std-truncgauss fields; for uniform param=[lb,ub]
-        n_epochs_lse=20, n_epochs_sme=10,
         lse_grid=_lse_grid(100000), sme_grid=_sme_grid(30000),
-        w_max=0.01, k=2.0),
+        lse=dict(param_input=[-1.0, 1.0], param_dist=[-1.0, 1.0], k=2.0,
+                 mult_u=[1.0], n_epochs=20),
+        sme=dict(param_input=[-1.0, 1.0], param_dist=[-1.0, 1.0], k=0.1,
+                 mult_u=[1.0], n_epochs=10),
+        w_max=0.01),
+
     "pendulum_trunc_guass": dict(
         system="pendulum", distr="trunc_guass",
-        param_input=[0.0, 1.0, 1], param_dist=[0.0, 0.1, 10],
-        n_epochs_lse=20, n_epochs_sme=10,
         lse_grid=_lse_grid(100000), sme_grid=_sme_grid(30000),
-        w_max=0.01, k=2.0),
-    # ---- quadrotor ----
+        lse=dict(param_input=[0.0, 1.0, 1], param_dist=[0.0, 0.1, 10], k=2.0,
+                 mult_u=[1.0], n_epochs=20),
+        sme=dict(param_input=[0.0, 0.5, 2], param_dist=[0.0, 0.5, 2], k=0.1,
+                 mult_u=[1.0], n_epochs=10),
+        w_max=0.01),
+
+    # ---------------- quadrotor ----------------
     "quadrotor_uniform": dict(
         system="quadrotor", distr="uniform",
-        param_input=[-1.0, 1.0], param_dist=[-1.0, 1.0],
-        n_epochs_lse=20, n_epochs_sme=10,
         lse_grid=_lse_grid(30002), sme_grid=_sme_grid(30000),
+        lse=dict(param_input=[-1.0, 1.0], param_dist=[-1.0, 1.0], k=1.0,
+                 mult_u=[1.0, 0.2, 0.2, 0.2], n_epochs=20),
+        sme=dict(param_input=[-1.0, 1.0], param_dist=[-1.0, 1.0], k=1.0,
+                 mult_u=[1.0, 0.2, 0.2, 0.2], n_epochs=10),
         w_max=0.01),
+
     "quadrotor_trunc_guass": dict(
         system="quadrotor", distr="trunc_guass",
-        param_input=[0.0, 0.1, 1], param_dist=[0.0, 0.1, 1],
-        n_epochs_lse=20, n_epochs_sme=10,
         lse_grid=_lse_grid(30002), sme_grid=_sme_grid(30000),
+        lse=dict(param_input=[0.0, 0.1, 1], param_dist=[0.0, 0.1, 1], k=1.0,
+                 mult_u=[1.0, 0.2, 0.2, 0.2], n_epochs=20),
+        sme=dict(param_input=[0.0, 0.5, 2], param_dist=[0.0, 0.5, 2], k=1.0,
+                 mult_u=[1.0, 0.2, 0.2, 0.2], n_epochs=10),
         w_max=0.01),
 }
 
@@ -130,16 +145,26 @@ def estimate_sme(system, Delta, Phi, w_max, ground_truth, dim):
 # rate analysis: slope of log(error) vs log(T) in the last decade
 # ---------------------------------------------------------------------------
 def empirical_slope(T_all, err_all):
+    """Slope of log(error) vs log(T) in the last decade (T >= max/10).
+
+    Uses at least the last 5 points to get a stable asymptotic-rate estimate.
+    """
     T = np.asarray(T_all, float)
     err = np.asarray(err_all, float)
-    # use points with T in the upper half-decade range to estimate asymptotic slope
-    mask = T >= 0.316 * T.max()
+    mask = T >= 0.1 * T.max()
+    if mask.sum() < 5:  # fall back to the tail 5 points
+        mask[-5:] = True
     x = np.log(T[mask]); y = np.log(np.maximum(err[mask], 1e-15))
     if len(x) < 2:
         return float("nan")
     A = np.vstack([x, np.ones_like(x)]).T
-    (slope, _), *_ = np.linalg.lstsq(A, y, rcond=None)
-    return float(slope)
+    (slope, _), res, rank, sv = np.linalg.lstsq(A, y, rcond=None)
+    # r^2 of the log-log fit
+    yhat = A @ np.r_[slope, _]
+    ss_res = float(np.sum((y - yhat) ** 2))
+    ss_tot = float(np.sum((y - np.mean(y)) ** 2))
+    r2 = 1 - ss_res / ss_tot if ss_tot > 0 else float("nan")
+    return float(slope), r2, int(mask.sum())
 
 
 # ---------------------------------------------------------------------------
@@ -158,11 +183,12 @@ def run_scenario(cfg):
     t0 = time.time()
 
     # ---------- LSE ----------
-    n_lse = cfg["n_epochs_lse"]
+    lse_cfg = cfg["lse"]
+    n_lse = lse_cfg["n_epochs"]
     lse_grid = cfg["lse_grid"]
     print(f"[LSE] scenario={SCENARIO} trajs={n_lse} grid={len(lse_grid)} T<= {max(lse_grid)}", flush=True)
-    trajs = gen_trajectories(system, distr, cfg["param_input"], cfg["param_dist"],
-                             max(lse_grid), n_lse, k=cfg.get("k", 2.0))
+    trajs = gen_trajectories(system, distr, lse_cfg["param_input"], lse_cfg["param_dist"],
+                             max(lse_grid), n_lse, mult_u=lse_cfg["mult_u"], k=lse_cfg["k"])
     mean_err, std_err = [], []
     for T in lse_grid:
         errs = []
@@ -172,20 +198,20 @@ def run_scenario(cfg):
             errs.append(np.linalg.norm(th - ground_truth) / norm_c)
         mean_err.append(float(np.mean(errs)))
         std_err.append(float(np.std(errs)))
-    slope_lse = empirical_slope(lse_grid, mean_err)
-    print(f"[LSE] done T grid. empirical slope = {slope_lse:.3f} (theory -0.5)",
+    slope_lse, r2_lse, n_fit_lse = empirical_slope(lse_grid, mean_err)
+    print(f"[LSE] done T grid. empirical slope = {slope_lse:.3f} (theory -0.5) r2={r2_lse:.3f} nfit={n_fit_lse}",
           f"final normalized error = {mean_err[-1]:.4e} (theory O(1/sqrtT))", flush=True)
     np.savetxt(os.path.join(outdir, "lse_empirical.csv"),
                np.column_stack([lse_grid, mean_err, std_err]), delimiter=",",
                header="T,mean_norm_err,std_norm_err")
 
     # ---------- SME ----------
-    n_sme = cfg["n_epochs_sme"]
+    sme_cfg = cfg["sme"]
+    n_sme = sme_cfg["n_epochs"]
     sme_grid = cfg["sme_grid"]
     print(f"[SME] scenario={SCENARIO} trajs={n_sme} grid={len(sme_grid)} T<= {max(sme_grid)}", flush=True)
-    # reuse trajectories (same seeds); SME uses the longer trajectory
-    trajs_sme = gen_trajectories(system, distr, cfg["param_input"], cfg["param_dist"],
-                                 max(sme_grid), n_sme, k=cfg.get("k", 2.0))
+    trajs_sme = gen_trajectories(system, distr, sme_cfg["param_input"], sme_cfg["param_dist"],
+                                 max(sme_grid), n_sme, mult_u=sme_cfg["mult_u"], k=sme_cfg["k"])
     mean_diam, std_diam = [], []
     for T in sme_grid:
         diams = []
@@ -195,8 +221,8 @@ def run_scenario(cfg):
             diams.append(d)
         mean_diam.append(float(np.mean(diams)))
         std_diam.append(float(np.std(diams)))
-    slope_sme = empirical_slope(sme_grid, mean_diam)
-    print(f"[SME] done. empirical slope = {slope_sme:.3f} (theory -1)",
+    slope_sme, r2_sme, n_fit_sme = empirical_slope(sme_grid, mean_diam)
+    print(f"[SME] done. empirical slope = {slope_sme:.3f} (theory -1) r2={r2_sme:.3f} nfit={n_fit_sme}",
           f"final normalized diameter = {mean_diam[-1]/norm_c:.4e}", flush=True)
     np.savetxt(os.path.join(outdir, "sme_empirical.csv"),
                np.column_stack([sme_grid, mean_diam, std_diam]), delimiter=",",
@@ -214,12 +240,16 @@ def run_scenario(cfg):
             "lse": {
                 "paper_rate_claim": "O(1/sqrt(T))  (slope ~ -1/2)",
                 "observed_slope": slope_lse,
+                "slope_r2": r2_lse,
+                "slope_npoints": n_fit_lse,
                 "final_norm_err": mean_err[-1],
                 "assessment": _assess_slope(slope_lse, -0.5),
             },
             "sme": {
                 "paper_rate_claim": "O(1/T)  (slope ~ -1)",
                 "observed_slope": slope_sme,
+                "slope_r2": r2_sme,
+                "slope_npoints": n_fit_sme,
                 "final_norm_diam": mean_diam[-1] / norm_c,
                 "assessment": _assess_slope(slope_sme, -1.0),
             },
