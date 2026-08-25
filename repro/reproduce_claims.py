@@ -37,7 +37,7 @@ from dynamics import Pendulum, Quadrotor
 from estimators import (lse_pendulum, lse_quadrotor, run_sme,
                         uncertainty_diameter)
 
-SCENARIO = "pendulum_trunc_guass"   # <-- select the committed scenario per branch
+SCENARIO = "quadrotor_uniform"   # <-- select the committed scenario per branch
 
 # ---------- trajectory grids matching the paper's notebooks -------------
 def _lse_grid(max_T):
