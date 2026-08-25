@@ -32,7 +32,8 @@ def _noise1(distr, time_hor, seed, mean, std, support):
     if distr == "trunc_guass":
         if support is None:
             raise ValueError("trunc_guass needs a support bound")
-        return truncnorm(-support, support, loc=mean, scale=std).rvs(size=time_hor)
+        return truncnorm(-support, support, loc=mean, scale=std).rvs(size=time_hor,
+                                                                     random_state=rng)
     raise ValueError("unknown distribution: " + distr)
 
 
