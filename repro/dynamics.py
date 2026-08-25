@@ -153,7 +153,7 @@ class Quadrotor:
         kd_phi = kd_theta = kd_psi = 0.00875
         pz_d, vz_d = 5.0, 0.0
         q0_d, q1_d, q2_d, q3_d = self._euler_to_quaternion(0, 0, 0)
-        gvec = np.array([0.0, 0.0, G])
+        gvec = np.array([0.0, 0.0, G, 0.0, 0.0, 0.0])
 
         Delta_S, Phi = [], []
         t = 0

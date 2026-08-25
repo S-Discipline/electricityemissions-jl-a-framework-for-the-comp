@@ -49,9 +49,14 @@ def _quad_lse_matrices(Delta_S, Phi):
 
 
 def lse_quadrotor(Delta_S, Phi):
-    """theta_hat_ for the quadrotor (10 unknown scalars)."""
+    """theta_hat_ for the quadrotor (10 unknown scalars).
+
+    Paper builds YY (N,4), XX (N,10); theta_hat = (pinv(XX)@YY).T is (4,10)
+    (row = output channel, col = feature), and the 10 reported scalars come
+    from specific (row, col) entries.
+    """
     YY, XX = _quad_lse_matrices(Delta_S, Phi)
-    M = np.linalg.pinv(XX) @ YY
+    M = (np.linalg.pinv(XX) @ YY).T
     return np.array([M[0, 0], M[0, 1], M[0, 2], M[0, 3],
                      M[1, 4], M[1, 7],
                      M[2, 5], M[2, 8],
@@ -103,19 +108,19 @@ def _feasible_and_vertices(Ab, fallback_point):
 
     Ab rows encode [A | -b] so that the polytope is A x <= b  <=>  Ab @ (x,1) <= 0.
     The interior point is the Chebyshev center: the point maximising the min
-    slack, guaranteeing strict interiority (HalfspaceIntersection requires a
-    strictly-interior point). If the polytope is empty (unbounded feasible LP),
-    the paper falls back to the ground truth as the 'feasible point'; we mirror
-    that here.
+    slack, i.e.  max s  s.t. A x + s <= b, guaranteeing strict interiority
+    (HalfspaceIntersection requires a strictly-interior point). If the polytope
+    is degenerate/empty the paper falls back to the ground truth as the
+    'feasible point'; we mirror that here.
     """
     Ab = np.array(Ab, dtype=float)
     A = Ab[:, :-1]
     b = -Ab[:, -1]
     n = A.shape[1]
-    # Chebyshev center: max s  s.t.  A x - s*ones <= b  (s scalar included)
-    c = np.concatenate([np.zeros(n), [1.0]])
-    A_aug = np.hstack([A, -np.ones((A.shape[0], 1))])
-    res = linprog(c=-c, A_ub=A_aug, b_ub=b, bounds=[(None, None)] * n + [(0, None)],
+    # Chebyshev center: max s s.t. A x + s <= b  (s scalar >= 0)
+    c = np.concatenate([np.zeros(n), [-1.0]])
+    A_aug = np.hstack([A, np.ones((A.shape[0], 1))])
+    res = linprog(c=c, A_ub=A_aug, b_ub=b, bounds=[(None, None)] * n + [(0, None)],
                   method="highs")
     if res.success:
         x0 = res.x[:n]
