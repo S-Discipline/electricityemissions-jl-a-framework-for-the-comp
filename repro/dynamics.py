@@ -102,7 +102,7 @@ class Quadrotor:
                          -Ax / m, -Ay / m, -Az / m,
                          (Iyy - Izz) / Ixx, 1 / Ixx,
                          (Izz - Ixx) / Iyy, 1 / Iyy,
-                         (Ixx - Izz) / Izz, 1 / Izz])
+                         (Ixx - Iyy) / Izz, 1 / Izz])
 
     @property
     def theta_star_matrix(self):
