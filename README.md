@@ -11,22 +11,23 @@
 > LSE error and SME diameter over the paper's trial counts, and measured the log–log decay slope in
 > the last decade of `T`.
 >
-> **Assessment:**
-> * **SME (O(1/T)) — reproduced** on **all four** panels (pendulum/quadrotor × uniform/trunc-Gaussian): observed log–log slopes −1.11 to −1.21, all within noise of the claimed −1.0.
-> * **LSE (O(1/√T)) — reproduced on three of four** panels (both pendulums, quadrotor·uniform): slopes −0.39 to −0.61, near the claimed −0.5. The **quadrotor · truncated-Gaussian** LSE panel did **not** show the claimed decay in this setup (slope ≈ −0.05; its error plateaued at ≈1.9×10⁻³ — about 10× above the paper's published value). This run therefore did **not** show the reported effect on that single panel; we do not conclude the claim is wrong, only that it was not reproduced under our setup.
+> **Assessment (strict grade: C — partial reproduction).**
+> * **SME (O(1/T)) — trend reproduced on all four panels** (slopes −1.11…−1.21 ≈ claimed −1.0), and every SME set contains the true parameters.
+> * **LSE (O(1/√T)) — trend reproduced on three of four panels** (slopes −0.52…−0.61). The **quadrotor · truncated-Gaussian** LSE slope is shallow (−0.18 vs −0.5).
+> * **Magnitudes diverge** for the quadrotor: LSE error is **7–11× above** the paper's published value (1.1–1.6×10⁻³ vs ~1.4×10⁻⁴), and quadrotor·uniform SME is ~4× tighter (−76%). Pendulum magnitudes agree to within ~15–60%.
 >
-> **Paper vs observed (key numbers):**
+> **Paper vs observed (key numbers, corrected):**
 
-| Panel (system · noise) | Method | Paper rate | Observed slope | Observed final error/diam |
+| Panel (system · noise) | Method | Paper rate | Observed slope | Observed final (paper→mine) |
 |---|---|---|---|---|
-| Pendulum · Uniform | LSE | O(1/√T) | −0.61 | 6.8×10⁻⁵ |
-| Pendulum · Trunc-Gaussian | LSE | O(1/√T) | −0.61 | 2.1×10⁻⁵ |
-| Quadrotor · Uniform | LSE | O(1/√T) | −0.39 | 2.2×10⁻³ |
-| Quadrotor · Trunc-Gaussian | LSE | O(1/√T) | **−0.05** | **1.9×10⁻³** |
-| Pendulum · Uniform | SME | O(1/T) | −1.21 | 3.0×10⁻⁴ |
-| Pendulum · Trunc-Gaussian | SME | O(1/T) | −1.14 | 2.0×10⁻³ |
-| Quadrotor · Uniform | SME | O(1/T) | −1.15 | 2.4×10⁻³ |
-| Quadrotor · Trunc-Gaussian | SME | O(1/T) | −1.11 | 1.4×10⁻² |
+| Pendulum · Uniform | LSE | O(1/√T) | −0.61 | 5.3×10⁻⁵ → 6.8×10⁻⁵ (+30%) |
+| Pendulum · Trunc-Gaussian | LSE | O(1/√T) | −0.61 | 5.6×10⁻⁵ → 2.1×10⁻⁵ (−63%) |
+| Quadrotor · Uniform | LSE | O(1/√T) | −0.52 | 1.5×10⁻⁴ → 1.6×10⁻³ (**+980%**) |
+| Quadrotor · Trunc-Gaussian | LSE | O(1/√T) | **−0.18** | 1.4×10⁻⁴ → 1.1×10⁻³ (**+640%**) |
+| Pendulum · Uniform | SME | O(1/T) | −1.21 | 3.5×10⁻⁴ → 3.0×10⁻⁴ (−15%) |
+| Pendulum · Trunc-Gaussian | SME | O(1/T) | −1.14 | — |
+| Quadrotor · Uniform | SME | O(1/T) | −1.15 | 1.0×10⁻² → 2.4×10⁻³ (−76%) |
+| Quadrotor · Trunc-Gaussian | SME | O(1/T) | −1.11 | — |
 
 > **Downscaling / substitutions:** Pendulum LSE was swept to *T* = 10⁵ (paper: 2×10⁵); all other
 > grids match the paper. SME uses `scipy.optimize.linprog` (Chebyshev center / halfspace
@@ -49,10 +50,13 @@ Every node runs the **identical** command — `pip install --quiet numpy scipy m
 |---|---|---|---|---|
 | `orx/pendulum-lse-sme-truncated-gaussian` | pendulum, truncated-Gaussian (baseline) | `pip install --quiet numpy scipy matplotlib 2>/dev/null; python3 repro/reproduce_claims.py` | LSE −0.61 ✓ · SME −1.14 ✓ | `eei-a10` ssh, ~46 s |
 | `orx/pendulum-lse-sme-uniform` | pendulum, uniform | `pip install --quiet numpy scipy matplotlib 2>/dev/null; python3 repro/reproduce_claims.py` | LSE −0.61 ✓ · SME −1.21 ✓ | `eei-a10` ssh, ~40 s |
-| `orx/quadrotor-lse-sme-truncated-gaussian` | quadrotor, truncated-Gaussian | `pip install --quiet numpy scipy matplotlib 2>/dev/null; python3 repro/reproduce_claims.py` | LSE −0.05 ⚠ · SME −1.11 ✓ | `eei-a10` ssh, ~18 min |
-| `orx/quadrotor-lse-sme-uniform` | quadrotor, uniform | `pip install --quiet numpy scipy matplotlib 2>/dev/null; python3 repro/reproduce_claims.py` | LSE −0.39 ✓ · SME −1.15 ✓ | `eei-a10` ssh, ~23 min |
+| `orx/quadrotor-lse-sme-truncated-gaussian` | quadrotor, truncated-Gaussian | `pip install --quiet numpy scipy matplotlib 2>/dev/null; python3 repro/reproduce_claims.py` | LSE −0.18 ⚠ · SME −1.11 ✓ | `eei-a10` ssh, ~18 min |
+| `orx/quadrotor-lse-sme-uniform` | quadrotor, uniform | `pip install --quiet numpy scipy matplotlib 2>/dev/null; python3 repro/reproduce_claims.py` | LSE −0.52 ✓ · SME −1.15 ✓ | `eei-a10` ssh, ~23 min |
 
-*Assessment key: ✓ = within ~30% of the claimed slope (aligned); ⚠ = far from the claim (did not show the reported decay).*
+*Assessment key: ✓ = within ~30% of the claimed slope (aligned); ⚠ = far from the claim. Note the
+grade is C, not B: the slopes/trends are mostly right, but the quadrotor LSE magnitudes are 7–11×
+off and quadrotor SME ~4× tighter, so the quantitative match is not close enough for a full or
+reduced-scale success.*
 
 ---
 

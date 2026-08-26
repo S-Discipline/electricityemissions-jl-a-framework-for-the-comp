@@ -34,6 +34,9 @@ We reproduced these rates on the paper's **pendulum** and **quadrotor**, under
 **uniform** and **truncated-Gaussian** noise. The SME claim reproduces on **all four**
 panels (log–log slope ≈ −1); the LSE claim reproduces on **three** of four (slope ≈ −0.5).
 
+**Grade: C (partial).** Trends/rates mostly match, but the quadrotor LSE magnitudes are 7–11× above
+the paper's published values (and quadrotor SME is ~4× tighter), so this is not a full reproduction.
+
 This notebook shows the **already-computed** evidence from the reproduction runs — no
 experiment needs to be rerun. The curves below are embedded directly from those runs.
         """
@@ -86,8 +89,8 @@ def _(make_plot, np):
     _L = {
         "Pendulum · Uniform": "1,7.362212e-02;500,9.340224e-04;1000,7.364729e-04;2000,5.320309e-04;3000,4.339775e-04;4000,3.810651e-04;5000,3.133709e-04;6000,2.698257e-04;7000,2.518082e-04;8000,2.459812e-04;9000,2.427919e-04;10000,2.416539e-04;20000,1.663099e-04;30000,1.463242e-04;40000,1.174835e-04;50000,9.930984e-05;60000,8.510382e-05;70000,6.938801e-05;80000,6.813793e-05;90000,6.649717e-05;100000,6.840006e-05",
         "Pendulum · Trunc": "1,5.106704e-02;500,3.970527e-04;1000,2.376094e-04;2000,1.146090e-04;3000,1.129435e-04;4000,8.643566e-05;5000,7.281698e-05;6000,8.096023e-05;7000,7.773627e-05;8000,7.349411e-05;9000,7.460212e-05;10000,7.074371e-05;20000,5.053493e-05;30000,3.727057e-05;40000,2.889618e-05;50000,2.445607e-05;60000,2.250971e-05;70000,1.812143e-05;80000,1.993482e-05;90000,1.994125e-05;100000,2.074373e-05",
-        "Quadrotor · Uniform": "1,9.999720e-01;500,1.139141e-02;1000,7.188072e-03;2000,4.866661e-03;3000,4.402573e-03;4000,4.661620e-03;5000,4.460176e-03;6000,4.063845e-03;7000,3.942039e-03;8000,3.626707e-03;9000,3.430669e-03;10000,3.211228e-03;20000,2.499362e-03;30000,2.207111e-03;30002,2.205158e-03",
-        "Quadrotor · Trunc": "1,9.999725e-01;500,2.253247e-03;1000,2.243333e-03;2000,2.205473e-03;3000,2.192743e-03;4000,2.179068e-03;5000,2.197813e-03;6000,2.161162e-03;7000,2.153984e-03;8000,2.104964e-03;9000,2.118879e-03;10000,2.085147e-03;20000,1.957585e-03;30000,1.866686e-03;30002,1.867522e-03",
+        "Quadrotor · Uniform": "1,9.999720e-01;500,1.1255e-02;1000,7.0097e-03;2000,4.5789e-03;3000,4.0075e-03;4000,4.3821e-03;5000,4.1420e-03;6000,3.7256e-03;7000,3.5729e-03;8000,3.2282e-03;9000,3.0104e-03;10000,2.7655e-03;20000,1.9299e-03;30000,1.6046e-03;30002,1.6024e-03",
+        "Quadrotor · Trunc": "1,9.999725e-01;500,1.5715e-03;1000,1.5559e-03;2000,1.5077e-03;3000,1.4834e-03;4000,1.4600e-03;5000,1.4851e-03;6000,1.4285e-03;7000,1.4229e-03;8000,1.3607e-03;9000,1.3774e-03;10000,1.3148e-03;20000,1.1576e-03;30000,1.0508e-03;30002,1.0521e-03",
     }
     lse_curves = {}
     for k, s in _L.items():
@@ -103,8 +106,8 @@ def _(mo):
     mo.md(
         r"""
 **Read-out.** Three panels (both pendulums, quadrotor·uniform) fall on a ~`O(1/√T)`
-line (dashed, slope −0.5). **Quadrotor · Truncated-Gaussian** does **not**: the error stops
-shrinking near `T≈10³` and plateaus at ≈1.9×10⁻³ (log–log slope ≈ −0.05). We do not treat this
+line (dashed, slope −0.5). **Quadrotor · Truncated-Gaussian** does **not**: the error decays slowly
+(≈1.05×10⁻³ at `T≈3×10⁴`, log–log slope ≈ −0.18). We do not treat this
 as refuting the paper; it is that panel's setup-sensitivity. See the full report.
         """
     )
@@ -125,8 +128,8 @@ def _(mo):
 |---|---|---|
 | Pendulum · Uniform | −0.61 | −1.21 |
 | Pendulum · Trunc | −0.61 | −1.14 |
-| Quadrotor · Uniform | −0.39 | −1.15 |
-| Quadrotor · Trunc | −0.05 | −1.11 |
+| Quadrotor · Uniform | −0.52 | −1.15 |
+| Quadrotor · Trunc | −0.18 | −1.11 |
 
 All SME slopes sit within noise of **−1**; three LSE slopes are near **−0.5**. Only the
 quadrotor·truncated-Gaussian LSE is far from its claim.

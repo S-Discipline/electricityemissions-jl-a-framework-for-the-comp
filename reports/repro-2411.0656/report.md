@@ -2,7 +2,9 @@
 
 **Central question.** When a nonlinear robot or mechanical system is observed from data, the parameters of its dynamics (mass, inertia, rod length, …) are usually unknown. The paper studies two estimators that recover them from a *single noisy input/output trajectory*, using only passive i.i.d. exploration noise — no clever probing. It claims worst-case **least-squares (LSE)** errors shrink like **O(1/√T)** and that **set-membership (SME)** uncertainty sets (sets guaranteed to contain the true parameters) shrink like **O(1/T)** in trajectory length *T*, for any system whose features are **real-analytic** functions (polynomials, sines, cosines — which describe pendulums and quadrotors).
 
-This report reproduces those two headline numerical claims on the pendulum (Example 1) and quadrotor (Example 2) of the paper, under both uniform and truncated-Gaussian i.i.d. exploration noise — the four panels of the paper's Figures 1 and 2. **All five SME claims reproduced (slope ≈ −1). Three of four LSE claims reproduced (slope ≈ −0.5); the quadrotor-under-truncated-Gaussian LSE did not decay at the claimed rate in this setup (it plateaued).**
+This report reproduces those two headline numerical claims on the pendulum (Example 1) and quadrotor (Example 2) of the paper, under both uniform and truncated-Gaussian i.i.d. exploration noise — the four panels of the paper's Figures 1 and 2.
+
+**Strict verdict: C — partial reproduction.** The *trends* reproduce — all four SME panels shrink at ≈O(1/T) (slopes −1.10…−1.21) and three of four LSE panels at ≈O(1/√T) (slopes −0.52…−0.61), and every SME set contains the true parameters. The *magnitudes* do not fully match: quadrotor LSE is 7–11× above the paper's published value (and the quadrotor·truncated-Gaussian LSE slope is shallow, −0.18), and quadrotor SME is ~4× tighter. See §"Divergences and the strict grade".
 
 ![Headline: reproduced SME uncertainty-set diameter converges ~ O(1/T) on all four panels.](images/fig1_sme_convergence.png)
 
@@ -57,18 +59,20 @@ pip install --quiet numpy scipy matplotlib 2>/dev/null; python3 repro/reproduce_
 
 ![Observed decay slopes vs the paper's claimed rates.](images/fig3_rate_comparison.png)
 
-**Figure 3 — observed log–log slopes vs claimed rates** (dashed: LSE −0.5, SME −1.0). All SME slopes land within noise of −1; three LSE slopes land near −0.5; the quadrotor·trunc LSE slope sits near **0**.
+**Figure 3 — observed log–log slopes vs claimed rates** (dashed: LSE −0.5, SME −1.0). All four SME slopes land within noise of −1; three LSE slopes land near −0.5; the quadrotor·trunc LSE slope is shallow (−0.18).
 
-| Panel | Paper method | Paper rate claim | Observed slope | Agreement |
-|---|---|---|---|---|
-| Pendulum · Trunc-Gaussian | LSE | O(1/√T) (−0.5) | **−0.61** (r²=.95) | ✅ aligned |
-| Pendulum · Uniform | LSE | O(1/√T) (−0.5) | **−0.61** (r²=.98) | ✅ aligned |
-| Quadrotor · Trunc-Gaussian | LSE | O(1/√T) (−0.5) | **−0.09** (r²=.96) | ⚠️ **not decayed** |
-| Quadrotor · Uniform | LSE | O(1/√T) (−0.5) | **−0.39** (r²=.99) | ✅ aligned |
-| Pendulum · Trunc-Gaussian | SME | O(1/T) (−1.0) | **−1.14** (r²=.97) | ✅ aligned |
-| Pendulum · Uniform | SME | O(1/T) (−1.0) | **−1.21** (r²=.97) | ✅ aligned |
-| Quadrotor · Trunc-Gaussian | SME | O(1/T) (−1.0) | **−1.11** (r²=.97) | ✅ aligned |
-| Quadrotor · Uniform | SME | O(1/T) (−1.0) | **−1.15** (r²=.97) | ✅ aligned |
+| Panel | Method | Claimed slope | Observed slope | Direction/trend | Magnitude (paper→mine) |
+|---|---|---|---|---|---|
+| Pendulum · Trunc-Gaussian | LSE | −0.5 | **−0.61** (r²=.95) | ✅ | 5.6×10⁻⁵ → 2.1×10⁻⁵ (−63%) |
+| Pendulum · Uniform | LSE | −0.5 | **−0.61** (r²=.98) | ✅ | 5.3×10⁻⁵ → 6.8×10⁻⁵ (+30%) |
+| Quadrotor · Trunc-Gaussian | LSE | −0.5 | **−0.18** (r²=.97) | ⚠️ shallow | 1.4×10⁻⁴ → 1.1×10⁻³ (**+640%**) |
+| Quadrotor · Uniform | LSE | −0.5 | **−0.52** (r²=.99) | ✅ | 1.5×10⁻⁴ → 1.6×10⁻³ (**+980%**) |
+| Pendulum · Trunc-Gaussian | SME | −1.0 | **−1.14** (r²=.97) | ✅ | — |
+| Pendulum · Uniform | SME | −1.0 | **−1.21** (r²=.97) | ✅ | 3.5×10⁻⁴ → 3.0×10⁻⁴ (−15%) |
+| Quadrotor · Trunc-Gaussian | SME | −1.0 | **−1.11** (r²=.97) | ✅ | — |
+| Quadrotor · Uniform | SME | −1.0 | **−1.15** (r²=.97) | ✅ | 1.0×10⁻² → 2.4×10⁻³ (−76%) |
+
+*Magnitude column compares the final (largest-*T*) normalized value to the paper's published value (both normalized identically); a dash means the paper did not publish a directly comparable value for that panel.*
 
 A slope is "aligned" when it is within ~30% of the claimed rate; r² measures how well the log–log curve follows a straight line in the last decade.
 
@@ -82,11 +86,30 @@ Where the paper ships result data, the reproduction lands on top of it:
 
 For example, pendulum·uniform SME diameters at *T* = 1000 and *T* = 30000 are **1.14×10⁻² / 3.1×10⁻⁴** here vs the paper's **1.11×10⁻² / 3.5×10⁻⁴**.
 
-### The one divergent result
+### Divergences and the strict grade
 
-The **quadrotor LSE under truncated-Gaussian noise** (paper Figure 1d) did **not** show the claimed O(1/√T) decay in this reproduction. Its empirical error fell from ~1.6×10⁻³ at *T*=500 to ~1.4×10⁻³ by *T*=10³ and then **plateaued**, ending at ~1.9×10⁻³ at *T*=30000 (slope ≈ −0.05 to −0.09). By contrast the paper's own published per-component data for this panel continues down (normalized error ~1.0×10⁻⁴ at *T*=30000, fitted slope ≈ −0.48).
+**Two kinds of divergence** remain after correcting a ground-truth bug (`theta_star_vec[8]`
+was `(Ixx−Izz)/Izz` instead of the paper's `(Ixx−Iyy)/Izz`, which is 0 when Ixx==Iyy; it inflated
+the quadrotor LSE error and falsely made θ* appear outside the SME set):
 
-We did not interpret this as the claim being wrong. The most plausible explanation is that this particular panel is **sensitive to the lossy LSE formulation** the paper uses for the quadrotor (it regresses 4 grouped outputs onto 10 features, coupling rotational inertia parameters through specific feature/state products), and to the *specific noise realization*; the two other panels and both SME panels reproduced cleanly, and the paper's SME claim — the paper's more distinctive contribution — reproduced on all four panels.
+1. **Quadrotor LSE magnitude.** Even after the fix, my normalized LSE error at the largest *T* is
+   ≈1.1×10⁻³ (trunc) and ≈1.6×10⁻³ (uniform), versus the paper's ≈1.4×10⁻⁴ / ≈1.5×10⁻⁴ — a
+   **7–11×** gap. The *direction* (error decreases with *T*) and the *rate* (slope ≈ −0.5 for
+   uniform) match, but the magnitudes do not. The trunc panel additionally shows a shallow slope
+   (−0.18 vs −0.5). This is concentrated in the rotational-inertia parameters (1/Ixx, 1/Iyy, 1/Izz),
+   whose estimates are ~5× worse than the paper's; the translational parameters match well.
+2. **Quadrotor SME magnitude.** My SME set for quadrotor·uniform is ≈4× tighter than the paper's
+   (2.4×10⁻³ vs 1.0×10⁻²), i.e. −76%; pendulum·uniform SME agrees to −15%. The *rate* (~O(1/T))
+   matches in all four SME panels.
+
+The **trend/rate conclusions** (both estimators shrink with *T* at ≈ the claimed rates, and the SME
+sets contain θ* in every panel) are supported; the **quantitative magnitudes** are not close enough
+(quadrotor LSE 7–11×, quadrotor SME 76%) to count as a full reproduction.
+
+### Final grade: **C — partial reproduction**
+
+See the top of this document and the `README` for the full grade table, the condition
+differences (downscaled pendulum-LSE horizon, scipy LP vs cvxopt, CPU-only), and next steps.
 
 ---
 
